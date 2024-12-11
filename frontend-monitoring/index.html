@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Parking Monitoring</title>
+  <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+</head>
+
+<body x-data="parkingMonitoring()">
+  <h1>Parking Monitoring</h1>
+  <div>
+    <h2>Total Cars In: <span x-text="totalIn"></span></h2>
+    <h2>Total Cars Out: <span x-text="totalOut"></span></h2>
+    <div>
+      <h2>Update Parking Record</h2>
+      <h3>Error Records</h3>
+      <ul>
+        <template x-for="record in errorRecords" :key="record.id">
+          <li>
+            <input type="radio" :value="record.id" x-model="selectedRecordId" />
+            <span
+              x-text="`ID: ${record.id}, Plate: ${record.platNomor || 'N/A'}, Waktu Masuk: ${new Date(record.waktuMasuk).toLocaleString()}`"></span>
+          </li>
+        </template>
+      </ul>
+
+      <label for="manualPlate">New License Plate:</label>
+      <input type="text" id="manualPlate" x-model="manualPlate" placeholder="Enter New License Plate" required />
+
+      <button @click="updateRecord">Update Record</button>
+    </div>
+    <h2>Current Cars:</h2>
+    <ul>
+      <template x-for="record in parkingInRecords" :key="record.id">
+        <li x-text="record.platNomor + ' - ' + new Date(record.waktuMasuk).toLocaleString()"></li>
+      </template>
+    </ul>
+  </div>
+
+  <script>
+    function parkingMonitoring() {
+      return {
+        totalIn: 0,
+        totalOut: 0,
+        parkingInRecords: [],
+        errorRecords: [],
+        selectedRecordId: null,
+        manualPlate: '',
+        init() {
+          this.fetchParkingStatus();
+          this.fetchErrorRecords();
+          this.setupWebSocket();
+        },
+        async fetchParkingStatus() {
+          const response = await fetch('http://localhost:3000/api/monitoring');
+          const data = await response.json();
+          this.totalIn = data.totalIn;
+          this.totalOut = data.totalOut;
+          this.parkingInRecords = data.parkingInRecords;
+        },
+        async fetchErrorRecords() {
+          const response = await fetch('http://localhost:3000/api/error-records');
+          const data = await response.json();
+          this.errorRecords = data.records;
+          console.log(data);
+        },
+
+        async updateRecord() {
+          if (!this.selectedRecordId) {
+            alert('Please select a record to update.');
+            return;
+          }
+
+          try {
+            const response = await fetch('http://localhost:3000/api/manual-input/update', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                recordId: this.selectedRecordId,
+                platNomor: this.manualPlate,
+              }),
+            });
+
+            if (!response.ok) {
+              const errorData = await response.json();
+              throw new Error(errorData.message || 'Failed to update record.');
+            }
+
+            const result = await response.json();
+            alert(result.message);
+            this.fetchErrorRecords(); // Refresh the records after update
+            this.manualPlate = ''; // Clear the input field
+            this.selectedRecordId = null; // Reset the selected record
+            this.fetchParkingStatus(); // Fetch updated parking status
+          } catch (error) {
+            alert(`Error: ${error.message}`);
+          }
+        },
+
+        setupWebSocket() {
+          const ws = new WebSocket('ws://localhost:3000/ws');
+          console.log("WebSocket connection established");
+          ws.onmessage = (event) => {
+            const message = JSON.parse(event.data);
+            if (message.event === "PARK_IN") {
+              this.fetchParkingStatus(); // Refresh the status on car park in
+              this.fetchErrorRecords();
+            } else if (message.event === "PARK_OUT") {
+              this.fetchParkingStatus(); // Refresh the status on car park out
+              this.fetchErrorRecords();
+            } else if (message.event === "ERROR") {
+              alert(message.message); // Show error messages
+            }
+          };
+        }
+      };
+    }
+  </script>
+</body>
+
+</html>

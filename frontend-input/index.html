@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Simulate Python Backend</title>
+</head>
+
+<body>
+  <h1>Simulate Python Backend</h1>
+
+  <!-- Entry Form -->
+  <form id="simulate-entry">
+    <input type="text" name="platNomor" placeholder="Plat Nomor" required>
+    <input type="text" name="image_link" placeholder="Image Link" required>
+    <input type="text" name="jenis_kendaraan" placeholder="Jenis Kendaraan" required>
+    <input type="text" name="kota_provinsi" placeholder="Kota, Provinsi" required>
+    <input type="text" name="wilayah" placeholder="Wilayah" required>
+    <button type="submit">Send Entry</button>
+  </form>
+
+  <!-- Exit Form -->
+  <form id="simulate-exit">
+    <input type="text" name="platNomor" placeholder="Plat Nomor" required>
+    <input type="text" name="image_link" placeholder="Image Link" required>
+    <input type="text" name="jenis_kendaraan" placeholder="Jenis Kendaraan" required>
+    <input type="text" name="kota_provinsi" placeholder="Kota, Provinsi" required>
+    <input type="text" name="wilayah" placeholder="Wilayah" required>
+    <button type="submit">Send Exit</button>
+  </form>
+
+  <script>
+    async function handleSubmit(event, endpoint) {
+      event.preventDefault();
+
+      const formData = new FormData(event.target);
+      const data = {
+        platNomor: formData.get('platNomor'),
+        image_link: formData.get('image_link'),
+        jenis_kendaraan: formData.get('jenis_kendaraan'),
+        kota_provinsi: formData.get('kota_provinsi'),
+        wilayah: formData.get('wilayah'),
+      };
+
+      console.log(data);
+
+      await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+    }
+
+    document.getElementById('simulate-entry').onsubmit = (e) => handleSubmit(e, 'http://localhost:3000/api/parkir/masuk');
+    document.getElementById('simulate-exit').onsubmit = (e) => handleSubmit(e, 'http://localhost:3000/api/parkir/keluar');
+  </script>
+</body>
+
+</html>

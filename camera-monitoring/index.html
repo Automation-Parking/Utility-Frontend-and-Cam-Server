@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Monitoring Site</title>
+</head>
+
+<body>
+  <h1>Monitoring Site</h1>
+  <img id="stream" width="640" height="480" alt="Camera Stream" />
+  <h2>Captured Image</h2>
+  <img id="capturedImage" width="640" height="480" alt="Captured Image" />
+
+  <h3>Control Cameras</h3>
+  <button id="toggleCamera1">Turn Off Camera 1</button>
+  <button id="toggleCamera2">Turn Off Camera 2</button>
+
+  <script>
+    const ws = new WebSocket('wss://2bde-114-10-77-66.ngrok-free.app');
+    const img = document.getElementById('stream');
+    const capturedImg = document.getElementById('capturedImage');
+    let streamingCamera1 = true;
+    let streamingCamera2 = true;
+
+    ws.onopen = () => {
+      console.log("WebSocket connection established");
+      ws.send(JSON.stringify({ type: 'register', clientType: 'monitor', clientId: 'monitor1' })); // Register as monitor
+    };
+
+    ws.onmessage = (message) => {
+      try {
+        const data = JSON.parse(message.data);
+        if (data.type === 'stream') {
+          img.src = data.image; // Set the image source to the received stream
+        } else if (data.type === 'capture') {
+          capturedImg.src = data.image; // Display the captured image
+          console.log(data.image);
+        }
+      } catch (error) {
+        console.error("Error parsing message data:", error);
+      }
+    };
+
+    document.getElementById('toggleCamera1').addEventListener('click', () => {
+      streamingCamera1 = !streamingCamera1;
+      ws.send(JSON.stringify({ type: 'toggle', state: streamingCamera1, cameraId: 1 }));
+      document.getElementById('toggleCamera1').innerText = streamingCamera1 ? 'Turn Off Camera 1' : 'Turn On Camera 1';
+    });
+
+    document.getElementById('toggleCamera2').addEventListener('click', () => {
+      streamingCamera2 = !streamingCamera2;
+      ws.send(JSON.stringify({ type: 'toggle', state: streamingCamera2, cameraId: 2 }));
+      document.getElementById('toggleCamera2').innerText = streamingCamera2 ? 'Turn Off Camera 2' : 'Turn On Camera 2';
+    });
+  </script>
+</body>
+
+</html>

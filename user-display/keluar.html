@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>QR Display keluar</title>
+  <script src="//unpkg.com/alpinejs" defer></script>
+  <style>
+    /* Include Tailwind CSS styles here for styling */
+  </style>
+</head>
+
+<body x-data="qrDisplayApp">
+  <div x-show="status === 'WELCOME'" class="welcome">
+    <h1>Welcome to the Parking System</h1>
+  </div>
+
+  <div x-show="status === 'SHOW_QR'" class="qr">
+    <h2>Please scan the QR code to pay</h2>
+    <img :src="qrCodeUrl" alt="QR Code" x-show="qrCodeUrl">
+  </div>
+
+  <div x-show="status === 'THANK_YOU'" class="thank-you">
+    <h1>Thank you for your payment!</h1>
+  </div>
+
+  <h1>Trigger Site</h1>
+  <button id="triggerButton">Snap Picture</button>
+
+  <script>
+    function qrDisplayApp() {
+      return {
+        status: 'WELCOME',
+        qrCodeUrl: '',
+
+        init() {
+          const socket = new WebSocket('ws://localhost:3000/ws');
+          socket.onopen = () => {
+            console.log("WebSocket connection established");
+          };
+          socket.onmessage = (event) => {
+            console.log("Raw WebSocket message received:", event.data);
+            try {
+              const data = JSON.parse(event.data);
+              console.log("Parsed WebSocket message:", data);
+              if (data.event === "SHOW_QR") {
+                console.log("Showing QR code:", data.qrCodeUrl);
+                this.qrCodeUrl = data.qrCodeUrl;
+                this.status = 'SHOW_QR';
+              } else if (data.event === "THANK_YOU") {
+                this.status = 'THANK_YOU';
+                setTimeout(() => this.status = 'WELCOME', 5000);
+              } else if (data.event === "PAYMENT_ERROR") {
+                alert(data.message);
+              } else if (data.event === "PARK_IN") {
+                console.log(data.message);
+              }
+            } catch (error) {
+              console.error("Error processing WebSocket message:", error);
+            }
+          };
+        }
+      };
+    }
+
+    // Inside the trigger client script
+    const wsCam = new WebSocket('wss://2bde-114-10-77-66.ngrok-free.app');
+    wsCam.onopen = () => {
+      console.log("WebSocket camera connection established");
+      wsCam.send(JSON.stringify({ type: 'register', clientType: 'trigger2', clientId: 'trigger2' })); // Change 'trigger1' to 'trigger2' for the second trigger
+    };
+
+    document.getElementById('triggerButton').addEventListener('click', () => {
+      wsCam.send(JSON.stringify({ type: 'trigger', cameraId: 2 })); // Change to 2 for the second trigger
+    });
+  </script>
+</body>
+
+</html>

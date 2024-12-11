@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Camera Site Keluar</title>
+</head>
+
+<body>
+  <h1>Camera Site Keluar</h1>
+  <video id="video" width="640" height="480" autoplay style="display: none;"></video>
+  <canvas id="canvas" width="640" height="480" style="display: none;"></canvas>
+  <button id="captureButton">Capture</button>
+  <script>
+    const ws = new WebSocket('wss://3d8d-114-124-206-103.ngrok-free.app');
+    const video = document.getElementById('video');
+    const canvas = document.getElementById('canvas');
+    const context = canvas.getContext('2d');
+    let streaming = false;
+
+    // Access the camera
+    navigator.mediaDevices.getUserMedia({ video: true })
+      .then((stream) => {
+        video.srcObject = stream;
+        streaming = true;
+      })
+      .catch((err) => {
+        console.error("Error accessing camera: ", err);
+      });
+
+    function captureImage() {
+      if (streaming) {
+        context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+        // Convert data to url
+        const imageData = canvas.toDataURL('image/png');
+        console.log("Sending capture image data:", imageData);
+
+        // Send image data to the REST API
+        fetch('https://3d8d-114-124-206-103.ngrok-free.app/capture', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          // body: JSON.stringify({ type: 'capture', image: formData }),
+          body: JSON.stringify({ image: imageData }),
+        })
+          .then(response => response.json())
+          .then(data => console.log('Success:', data))
+          .catch((error) => console.error('Error:', error));
+      }
+    }
+
+    document.getElementById('captureButton').addEventListener('click', captureImage);
+
+    ws.onopen = () => {
+      console.log("WebSocket connection established");
+      ws.send(JSON.stringify({ type: 'register', clientType: 'camera2', clientId: 'camera2' })); // Change 'camera1' to 'camera2' for the second camera
+    };
+
+    // Listen for capture trigger from WebSocket
+    ws.onmessage = (message) => {
+      const data = JSON.parse(message.data);
+
+      // Handle capture trigger
+      if (data.type === 'capture') {
+        captureImage();
+      }
+      // Handle toggle state
+      else if (data.type === 'toggle') {
+        if (data.state) {
+          // Restart the video stream
+          navigator.mediaDevices.getUserMedia({ video: true })
+            .then((stream) => {
+              video.srcObject = stream;
+              streaming = true;
+            })
+            .catch((err) => {
+              console.error("Error accessing camera: ", err);
+            });
+        } else {
+          // Stop the video stream
+          if (video.srcObject) {
+            video.srcObject.getTracks().forEach(track => track.stop());
+          }
+          streaming = false;
+        }
+      }
+    };
+
+
+    // Send video stream to server
+    setInterval(() => {
+      if (streaming) {
+        context.drawImage(video, 0, 0, canvas.width, canvas.height);
+        const imageData = canvas.toDataURL('image/jpeg', 0.3);
+
+        // Send image data to the REST API
+        fetch('https://3d8d-114-124-206-103.ngrok-free.app/upload', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ type: 'stream', image: imageData }),
+        })
+          .then(response => response.json())
+          .catch((error) => console.error('Error:', error));
+      }
+    }, 3000); // Send every 100ms
+  </script>
+</body>
+
+</html>

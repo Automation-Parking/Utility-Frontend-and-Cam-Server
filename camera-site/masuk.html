@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Camera Site Masuk</title>
+</head>
+
+<body>
+  <h1>Camera Site Masuk</h1>
+  <video id="video" width="640" height="480" autoplay style="display: none;"></video>
+  <canvas id="canvas" width="640" height="480" style="display: none;"></canvas>
+  <button id="captureButton">Capture</button>
+  <script>
+    const ws = new WebSocket('ws://localhost:3001');
+    const video = document.getElementById('video');
+    const canvas = document.getElementById('canvas');
+    const context = canvas.getContext('2d');
+    let streaming = false;
+
+    // Access the camera
+    navigator.mediaDevices.getUserMedia({ video: true })
+      .then((stream) => {
+        video.srcObject = stream;
+        streaming = true;
+      })
+      .catch((err) => {
+        console.error("Error accessing camera: ", err);
+      });
+
+    function captureImage() {
+      if (streaming) {
+        context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+        // Convert data to url
+        const imageData = canvas.toDataURL('image/png');
+        console.log("Sending capture image data:", imageData);
+
+        // Send image data to the REST API
+        fetch('http://localhost:3001/capture', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          // body: JSON.stringify({ type: 'capture', image: formData }),
+          body: JSON.stringify({ image: imageData }),
+        })
+          .then(response => response.json())
+          .then(data => console.log('Success:', data))
+          .catch((error) => console.error('Error:', error));
+      }
+    }
+
+    document.getElementById('captureButton').addEventListener('click', captureImage);
+
+    ws.onopen = () => {
+      console.log("WebSocket connection established");
+      ws.send(JSON.stringify({ type: 'register', clientType: 'camera1', clientId: 'camera1' })); // Change 'camera1' to 'camera2' for the second camera
+    };
+
+    // Listen for capture trigger from WebSocket
+    ws.onmessage = (message) => {
+      const data = JSON.parse(message.data);
+
+      // Handle capture trigger
+      if (data.type === 'capture') {
+        captureImage();
+      }
+    };
+  </script>
+</body>
+
+</html>

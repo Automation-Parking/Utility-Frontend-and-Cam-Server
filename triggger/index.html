@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Trigger Site</title>
+</head>
+
+<body>
+  <h1>Trigger Site</h1>
+  <button id="triggerButton">Snap Picture</button>
+  <script>
+    const ws = new WebSocket('wss://9057-180-243-125-250.ngrok-free.app');
+
+    ws.onopen = () => {
+      console.log("WebSocket connection established");
+    };
+
+    document.getElementById('triggerButton').addEventListener('click', () => {
+      ws.send(JSON.stringify({ type: 'trigger' }));
+    });
+  </script>
+</body>
+
+</html>
