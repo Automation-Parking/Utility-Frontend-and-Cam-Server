@@ -18,7 +18,7 @@
   <button id="toggleCamera2">Turn Off Camera 2</button>
 
   <script>
-    const ws = new WebSocket('wss://2bde-114-10-77-66.ngrok-free.app');
+    const ws = new WebSocket('ws://localhost:3001');
     const img = document.getElementById('stream');
     const capturedImg = document.getElementById('capturedImage');
     let streamingCamera1 = true;

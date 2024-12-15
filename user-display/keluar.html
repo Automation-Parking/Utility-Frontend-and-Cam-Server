@@ -6,27 +6,44 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>QR Display keluar</title>
   <script src="//unpkg.com/alpinejs" defer></script>
+  <script src="https://cdn.tailwindcss.com"></script>
   <style>
     /* Include Tailwind CSS styles here for styling */
   </style>
 </head>
 
-<body x-data="qrDisplayApp">
-  <div x-show="status === 'WELCOME'" class="welcome">
-    <h1>Welcome to the Parking System</h1>
-  </div>
+<body x-data="qrDisplayApp" class="h-screen bg-blue-50 flex items-center justify-center">
+  <div class="text-center space-y-8">
+    <!-- Welcome Screen -->
+    <div x-show="status === 'WELCOME'" class="transition-all duration-500">
+      <h1 class="text-4xl font-bold text-blue-800">Exit Gate</h1>
+      <p class="text-lg text-blue-600 mt-4">Drive safely!</p>
+    </div>
 
-  <div x-show="status === 'SHOW_QR'" class="qr">
-    <h2>Please scan the QR code to pay</h2>
-    <img :src="qrCodeUrl" alt="QR Code" x-show="qrCodeUrl">
-  </div>
+    <!-- QR Code Screen -->
+    <div x-show="status === 'SHOW_QR'" class="transition-all duration-500">
+      <h2 class="text-3xl font-bold text-blue-800">Please scan the QR code to pay</h2>
+      <div class="mt-4">
+        <img :src="qrCodeUrl" alt="QR Code" x-show="qrCodeUrl"
+          class="w-48 h-48 mx-auto border border-blue-300 shadow-md">
+      </div>
+      <p x-show="totalPrice !== null" class="text-lg text-blue-600 mt-4">
+        Total Price: Rp <span class="font-semibold text-blue-900" x-text="totalPrice"></span>
+      </p>
+    </div>
 
-  <div x-show="status === 'THANK_YOU'" class="thank-you">
-    <h1>Thank you for your payment!</h1>
-  </div>
+    <!-- Thank You Screen -->
+    <div x-show="status === 'THANK_YOU'" class="transition-all duration-500">
+      <h1 class="text-4xl font-bold text-blue-800">Thank you for your payment!</h1>
+      <p class="text-lg text-blue-600 mt-4">Have a great day!</p>
+    </div>
 
-  <h1>Trigger Site</h1>
-  <button id="triggerButton">Snap Picture</button>
+    <!-- Trigger Button -->
+    <button id="triggerButton"
+      class="px-6 py-3 bg-blue-600 text-white font-semibold rounded shadow hover:bg-blue-700 transition">
+      Exit
+    </button>
+  </div>
 
   <script>
     function qrDisplayApp() {
@@ -47,9 +64,11 @@
               if (data.event === "SHOW_QR") {
                 console.log("Showing QR code:", data.qrCodeUrl);
                 this.qrCodeUrl = data.qrCodeUrl;
+                this.totalPrice = data.message;
                 this.status = 'SHOW_QR';
               } else if (data.event === "THANK_YOU") {
                 this.status = 'THANK_YOU';
+                this.totalPrice = null;
                 setTimeout(() => this.status = 'WELCOME', 5000);
               } else if (data.event === "PAYMENT_ERROR") {
                 alert(data.message);
@@ -65,7 +84,7 @@
     }
 
     // Inside the trigger client script
-    const wsCam = new WebSocket('wss://2bde-114-10-77-66.ngrok-free.app');
+    const wsCam = new WebSocket('ws://localhost:3001');
     wsCam.onopen = () => {
       console.log("WebSocket camera connection established");
       wsCam.send(JSON.stringify({ type: 'register', clientType: 'trigger2', clientId: 'trigger2' })); // Change 'trigger1' to 'trigger2' for the second trigger

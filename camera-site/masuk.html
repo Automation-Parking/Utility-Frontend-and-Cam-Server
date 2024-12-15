@@ -9,9 +9,8 @@
 
 <body>
   <h1>Camera Site Masuk</h1>
-  <video id="video" width="640" height="480" autoplay style="display: none;"></video>
+  <video id="video" width="640" height="480" autoplay></video>
   <canvas id="canvas" width="640" height="480" style="display: none;"></canvas>
-  <button id="captureButton">Capture</button>
   <script>
     const ws = new WebSocket('ws://localhost:3001');
     const video = document.getElementById('video');
@@ -29,30 +28,54 @@
         console.error("Error accessing camera: ", err);
       });
 
-    function captureImage() {
-      if (streaming) {
-        context.drawImage(video, 0, 0, canvas.width, canvas.height);
-
-        // Convert data to url
-        const imageData = canvas.toDataURL('image/png');
-        console.log("Sending capture image data:", imageData);
-
-        // Send image data to the REST API
-        fetch('http://localhost:3001/capture', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          // body: JSON.stringify({ type: 'capture', image: formData }),
-          body: JSON.stringify({ image: imageData }),
-        })
-          .then(response => response.json())
-          .then(data => console.log('Success:', data))
-          .catch((error) => console.error('Error:', error));
-      }
+    async function getMlUrl() {
+      return fetch('http://localhost:3001/ml-url')
+        .then(response => response.json())
+        .then(data => data.mlUrl);
     }
 
-    document.getElementById('captureButton').addEventListener('click', captureImage);
+    async function captureImage() {
+      if (streaming) {
+        try {
+          context.drawImage(video, 0, 0, canvas.width, canvas.height);
+          const imageData = canvas.toDataURL('image/png');
+          console.log("Sending capture image data:", imageData);
+
+          const mlUrl = await getMlUrl();
+          console.log('ml url : ', mlUrl)
+
+          const mlApi = await fetch(mlUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ image: imageData }),
+          });
+
+          const data = await mlApi.json();
+          console.log('First API call success:', data);
+
+          const backendApi = await fetch('http://localhost:3000/api/parkir/masuk', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              platNomor: data.data.platNomor,
+              image_link: data.data.image_link,
+              kota_provinsi: data.data.kota_provinsi,
+              wilayah: data.data.wilayah
+            }),
+          });
+
+          if (!backendApi.ok) {
+            throw new Error(`Error with second API: ${backendApi.statusText}`);
+          }
+
+          const responseData = await backendApi.json();
+          console.log('Second API call success:', responseData);
+
+        } catch (error) {
+          console.error('Error:', error);
+        }
+      }
+    }
 
     ws.onopen = () => {
       console.log("WebSocket connection established");

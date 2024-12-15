@@ -6,22 +6,32 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>QR Display masuk</title>
   <script src="//unpkg.com/alpinejs" defer></script>
+  <script src="https://cdn.tailwindcss.com"></script>
   <style>
     /* Include Tailwind CSS styles here for styling */
   </style>
 </head>
 
-<body x-data="qrDisplayApp">
-  <div x-show="status === 'WELCOME'" class="welcome">
-    <h1>Welcome to the Parking System</h1>
-  </div>
+<body x-data="qrDisplayApp" class="h-screen bg-blue-50 flex items-center justify-center">
+  <div class="text-center space-y-8">
+    <!-- Welcome Screen -->
+    <div x-show="status === 'WELCOME'" class="transition-all duration-500">
+      <h1 class="text-4xl font-bold text-blue-800">Entrance Gate</h1>
+      <p class="text-lg text-blue-600 mt-4">Welcome to The Parking System</p>
+    </div>
 
-  <div x-show="status === 'THANK_YOU'" class="thank-you">
-    <h1>Good bye be safe!</h1>
-  </div>
+    <!-- Thank You Screen -->
+    <div x-show="status === 'PARK_IN'" class="transition-all duration-500">
+      <h1 class="text-4xl font-bold text-blue-800">Welcome! Be safe!</h1>
+      <p class="text-lg text-blue-600 mt-4">Thank you for visiting us!</p>
+    </div>
 
-  <h1>Trigger Site</h1>
-  <button id="triggerButton">Snap Picture</button>
+    <!-- Trigger Button -->
+    <button id="triggerButton"
+      class="px-6 py-3 bg-blue-600 text-white font-semibold rounded shadow hover:bg-blue-700 transition">
+      Entry
+    </button>
+  </div>
 
   <script>
     function qrDisplayApp() {
@@ -39,9 +49,9 @@
             try {
               const data = JSON.parse(event.data);
               console.log("Parsed WebSocket message:", data);
-              if (data.event === "THANK_YOU") {
-                this.status = 'THANK_YOU';
-                setTimeout(() => this.status = 'WELCOME', 5000);
+              if (data.event === "PARK_IN") {
+                this.status = 'PARK_IN';
+                setTimeout(() => this.status = 'WELCOME', 3000);
               }
             } catch (error) {
               console.error("Error processing WebSocket message:", error);

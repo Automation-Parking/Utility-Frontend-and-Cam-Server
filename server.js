@@ -7,6 +7,8 @@ const fs = require('fs');
 const path = require('path');
 const compression = require('compression');
 
+require('dotenv').config();
+
 const app = express();
 const server = http.createServer(app);
 const wss = new WebSocket.Server({ server });
@@ -24,6 +26,11 @@ app.use(express.static(path.join(__dirname, 'public')));
 // Root route (optional, can be removed if not needed)
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'index.html')); // Replace 'index.html' with main HTML file
+});
+
+app.get('/ml-url', (req, res) => {
+  console.log("ML_URL:", process.env.ML_URL)
+  res.json({ mlUrl: process.env.ML_URL });
 });
 
 // Route for the camera page
